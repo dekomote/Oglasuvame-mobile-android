@@ -1,8 +1,11 @@
-var chosen_region = "";
-var chosen_category = "";
-var search_query = "";
-var current_page = 0;
-var purpose = "";
+var OglSettings = {
+	chosen_region: "",
+	chosen_category: "",
+	search_query: "",
+	current_page: 0,
+	purpose: ""
+}
+
 
 var API_URL = "http://oglasuva.me/api/";
 
@@ -13,7 +16,7 @@ function onDeviceReady(){
     $.mobile.allowCrossDomainPages = true;
     $.support.cors = true;
     $.mobile.defaultPageTransition = 'none';
-    $.ajaxSetup({timeout: 10000});
+    $.ajaxSetup({timeout: 10000, async: false, cache:false});
 	checkConnection();
 }
 
@@ -43,7 +46,7 @@ function loadRegions(){
 	if($("#region-select option").length<=1){
 		$.get(API_URL + "regions.json", function(data){
 			$.each(data, function(idx, em){
-				var opt = $('<option value="'+em.id.toString()+'">'+em.name+'</option>');
+				var opt = $('<option value="'+em.id+'">'+em.name+'</option>');
 				$(opt).appendTo("#region-select");
 			});
 		}, "json");
@@ -73,32 +76,44 @@ function loadClassifieds(callback){
 		async: false,
 		timeout: 5000,
 		url:API_URL + "classifieds.json",
-		dataType: "json",		
+		dataType: "json",
+		
 		data: {
-			region: chosen_region, 
-			category: chosen_category, 
-			q: search_query, 
-			page: current_page, 
-			purpose: purpose
+			region: OglSettings.chosen_region, 
+			category: OglSettings.chosen_category, 
+			q: OglSettings.search_query, 
+			page: OglSettings.current_page, 
+			purpose: OglSettings.purpose
 		},
 		
 		success: function(data){
 				
 			if($(data).length>0){
-				$("#classifieds-listview").html("");
+				if(OglSettings.current_page==0)
+					$("#classifieds-listview").html("");
 				$.each(data, function(idx, em){
-					var li = $('<li data-theme="a"><a href="#details" data-icon="plus">'+em.title.toLowerCase()+'</a></li>');
-					$(li).appendTo("#classifieds-listview");				
+					var li = $('<li data-theme="a">\
+							<a href="#" data-icon="plus"><h3>'+em.title.toLowerCase()+'</h3>\
+							<p>'+formatElementContent(em)+'</p></a></li>');
+
+					if($("#more-btn").length>0){
+						$(li).insertAfter("#classifieds-listview li:not(.more-btn):last");
+					}
+					else{
+						$(li).appendTo("#classifieds-listview");
+					}
+					
+					$(li).tap(function(){fetchDetails(em.id);});
 				});
-				if($(data).length>=15){
-					var li = $('<li data-theme="b"><a id="more-btn" href="#details">Следни Огласи</a></li>');
-					$(li).appendTo("#classifieds-listview");	
+				if($(data).length>=15 && $("#more-btn").length==0){
+					var li = $('<li data-theme="b" class="more-btn"><a id="more-btn" href="#details">Следни Огласи</a></li>');
+					$(li).appendTo("#classifieds-listview");
 				}
 				$("#classifieds-listview").listview('refresh');				
-				current_page += 1;				
+				OglSettings.current_page += 1;				
 			}
 			else{
-				if(current_page == 0)
+				if(OglSettings.current_page == 0)
 					alert('Не е пронајден ни еден оглас.');				
 				else
 					alert('Нема следни огласи.');							
@@ -110,7 +125,7 @@ function loadClassifieds(callback){
 		}, 
 		
 		error: function(jqXHR, textStatus){
-			$.mobile.hidePageLoadingMsg();
+			$.mobile.hidePageLoadingMsg();			
 			alert('Проблем со конекција. Пробајте повторно.');				
 		}
 	});
@@ -118,14 +133,72 @@ function loadClassifieds(callback){
 
 function formatElementContent(em){
 	var content = "";
-	content += "<b>"+ em.category.name +"</b><br/>";
-	content += "<b>"+em.purpose.name+" во "+ em.region.name+"</b><br/>";
-	
+	content += "<b>"+ em.category.name +"</b> | ";
+	content += "<b>"+em.purpose.name+" во "+ em.region.name+"</b>";
    	if(em.price)
-   		content += "<b>Цена:</b> "+em.price+" "+em.currency + "<br/>";
-   	content += em.content;
-   	
+   		content += " | <b>Цена:</b> "+em.price+" "+em.currency + "<br/>";
    	return content
+}
+
+function fetchDetails(id){
+	$.ajax({
+			url: API_URL + "details/"+id+".json",
+			cache: false,
+			async: false,
+			success: function(data,tm,jq){
+				$('#details h3').html(data.title);
+				$('#details .details-content').html(data.content);
+				$('#details .details-category').html(data.category.name);
+				$('#details .details-purpose').html(data.purpose.name);
+				$('#details .details-region').html(data.region.name);
+				if(data.price)
+					$('#details .details-price').html("Цена: "+data.price+" "+data.currency);
+				else
+					$('#details .details-price').html("");
+				$('#details .details-contact-name').html(data.contact_person_name);
+				
+				if(data.home_phone)
+					$('#details .details-contact-home-phone').html('<a href="tel:'+data.home_phone+'">'+data.home_phone+'</a>');
+				else
+					$('#details .details-contact-home-phone').html("");
+				
+				if(data.mobile_phone)
+					$('#details .details-contact-mobile-phone').html('<a href="tel:'+data.mobile_phone+'">'+data.mobile_phone+'</a>');
+				else
+					$('#details .details-contact-mobile-phone').html("");
+				
+				if(data.location_lon){
+					$("#details-map").css("width","100%");
+					$("#details-map").css("height","10em");
+					var latitude = data.location_lat;
+			        var longitude = data.location_lon;
+			        var initialLocation = new google.maps.LatLng(latitude, longitude);
+			        var myOptions = {
+			            zoom: 12, 
+			            center: initialLocation, 
+			            mapTypeId: google.maps.MapTypeId.ROADMAP
+			        };
+			        var map = new google.maps.Map(document.getElementById("details-map"), 
+			                                      myOptions);
+			        var marker = new google.maps.Marker({
+			            position: initialLocation,
+			            map: map,
+			            title:data.title
+			        });
+			        google.maps.event.trigger(map, 'resize');
+				}
+				else{
+					$("#details-map").css("width","100%");
+					$("#details-map").css("height","0em");
+					$("#details-map").html("");
+				}
+				$.mobile.changePage('#details', {transition: 'none', role: 'dialog'});
+			}, 
+			dataType: "json",
+			error: function(jqm, text){
+				alert('Проблем со конекција. Пробајте повторно.');
+			}
+	});
 }
 
 $("#classifieds").live('pageinit', function(e){
@@ -133,17 +206,18 @@ $("#classifieds").live('pageinit', function(e){
 	
 	$("#filter-button").tap(function(e){
 		e.preventDefault();
-		search_query = $("#q").val();
-		purpose = $("#purpose").val();
-		chosen_category = $("#category-select").val();
-		chosen_region = $("#region-select").val();
-		current_page = 0;
+		OglSettings.search_query = $("#q").val();
+		OglSettings.purpose = $("#purpose").val();
+		OglSettings.chosen_category = $("#category-select").val();
+		OglSettings.chosen_region = $("#region-select").val();
+		OglSettings.current_page = 0;
 		loadClassifieds(function(){$.mobile.changePage("#classifieds");});
 	});
 	
 	$("#more-btn").live("tap", function(e){
 		e.preventDefault();
-		loadClassifieds(function(){$.mobile.silentScroll(0);});
+		var t = $(this).offset().top;
+		loadClassifieds(function(){$.mobile.silentScroll(t)});
 	});
 	
 	$("#close-app").live("tap", function(e){
