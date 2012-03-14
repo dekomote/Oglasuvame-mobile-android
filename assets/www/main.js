@@ -12,9 +12,9 @@ function onDeviceReady(){
 
     $.mobile.allowCrossDomainPages = true;
     $.support.cors = true;
-    
+    $.mobile.defaultPageTransition = 'none';
+    $.ajaxSetup({timeout: 10000});
 	checkConnection();
-	loadClassifieds();
 }
 
 function checkConnection() {
@@ -40,68 +40,80 @@ function checkConnection() {
 }
 
 function loadRegions(){
-	if($("#regions-listview li").length<1){
+	if($("#region-select option").length<=1){
 		$.get(API_URL + "regions.json", function(data){
 			$.each(data, function(idx, em){
-				var li = $('<li data-theme="a"><a href="#classifieds">'+em.name+'</a></li>');
-				$(li).appendTo("#regions-listview");
-				$(li).tap(function(){
-					chosen_region = em.id;
-					current_page = 0;
-					loadClassifieds();
-				});				
+				var opt = $('<option value="'+em.id.toString()+'">'+em.name+'</option>');
+				$(opt).appendTo("#region-select");
 			});
-			$("#regions-listview").listview("refresh");
 		}, "json");
 	}
 }
 
 function loadCategories(){
-	if($("#categories-listview li").length<1){
+	if($("#category-select option").length<=1){
+		
 		$.get(API_URL + "categories.json", function(data){
 			$.each(data, function(idx, em){
-				var li = $('<li data-theme="a" data-role="list-divider" data-dividertheme="a">'+em.name+'</li>');
-				$(li).appendTo("#categories-listview");
+				var optgroup = $('<optgroup label="'+em.name+'"></optgroup>');
+				$(optgroup).appendTo("#category-select");
 				$.each(em.child_categories, function(ix, el){
-					var li = $('<li data-theme="a"><a href="#classifieds">'+el.name+'</a></li>');
-					$(li).appendTo("#categories-listview");
-					$(li).tap(function(){
-						chosen_category = el.id;
-						current_page = 0;
-						loadClassifieds();
-					});
+					var opt = $('<option value="'+el.id.toString()+'">'+el.name+'</option>');
+					$(opt).appendTo(optgroup);					
 				});
 			});
-			$("#categories-listview").listview("refresh");
+		
 		}, "json");
 	}
 }
 
-function loadClassifieds(){
-	$.get(API_URL + "classifieds.json", {region: chosen_region, category: chosen_category, q: search_query, page: current_page, purpose: purpose}, function(data){
-		if(data){
-			if(current_page == 0)
+function loadClassifieds(callback){
+	$.mobile.showPageLoadingMsg();
+	$.ajax({
+		async: false,
+		timeout: 5000,
+		url:API_URL + "classifieds.json",
+		dataType: "json",		
+		data: {
+			region: chosen_region, 
+			category: chosen_category, 
+			q: search_query, 
+			page: current_page, 
+			purpose: purpose
+		},
+		
+		success: function(data){
+				
+			if($(data).length>0){
 				$("#classifieds-listview").html("");
-			$.each(data, function(idx, em){
-				var li = $('<div data-role="collapsible">\
-						   	<h3>'+em.title+'</h3>\
-						   	<p>'+formatElementContent(em)+'</p>\
-						   	</div>');
-				$(li).appendTo("#classifieds-listview");
-				$(li).collapsible();
-			});
-			current_page += 1;
+				$.each(data, function(idx, em){
+					var li = $('<li data-theme="a"><a href="#details" data-icon="plus">'+em.title.toLowerCase()+'</a></li>');
+					$(li).appendTo("#classifieds-listview");				
+				});
+				if($(data).length>=15){
+					var li = $('<li data-theme="b"><a id="more-btn" href="#details">Следни Огласи</a></li>');
+					$(li).appendTo("#classifieds-listview");	
+				}
+				$("#classifieds-listview").listview('refresh');				
+				current_page += 1;				
+			}
+			else{
+				if(current_page == 0)
+					alert('Не е пронајден ни еден оглас.');				
+				else
+					alert('Нема следни огласи.');							
+			}
+		    $.mobile.hidePageLoadingMsg();
+			if(callback){
+				callback();
+			}
+		}, 
+		
+		error: function(jqXHR, textStatus){
+			$.mobile.hidePageLoadingMsg();
+			alert('Проблем со конекција. Пробајте повторно.');				
 		}
-		else{
-			if(current_page == 0)
-				navigator.notification.confirm(
-		    	        'Не е пронајден ни еден оглас.',
-		    	        function(){},
-		    	        'Известување',
-		    	        'Во ред'
-		    	    );
-		}
-	}, "json");
+	});
 }
 
 function formatElementContent(em){
@@ -116,28 +128,39 @@ function formatElementContent(em){
    	return content
 }
 
-
-$("#regions").live('pageinit', function(e){
-	loadRegions();
-});
-
-$("#categories").live('pageinit', function(e){
-	loadCategories();
-});
-
 $("#classifieds").live('pageinit', function(e){
 	loadClassifieds();
 	
-	$("#q").live('change', function(e){
-		search_query = $(this).val();
+	$("#filter-button").tap(function(e){
+		e.preventDefault();
+		search_query = $("#q").val();
+		purpose = $("#purpose").val();
+		chosen_category = $("#category-select").val();
+		chosen_region = $("#region-select").val();
 		current_page = 0;
-		loadClassifieds();
+		loadClassifieds(function(){$.mobile.changePage("#classifieds");});
 	});
 	
-	$("#purpose").live('change', function(e){
-		purpose = $(this).val();
-		current_page = 0;
-		loadClassifieds();
+	$("#more-btn").live("tap", function(e){
+		e.preventDefault();
+		loadClassifieds(function(){$.mobile.silentScroll(0);});
 	});
+	
+	$("#close-app").live("tap", function(e){
+		navigator.notification.confirm(
+    	        'Излези од апликацијата',
+    	        function(button){
+    	        	if(button==1)
+    	        		navigator.app.exitApp();
+    	        },
+    	        'Излез',
+    	        'Да,Не'
+    	    );
+	});
+	
 });
 
+$("#filter").live('pageinit', function(e){
+	loadCategories();
+	loadRegions();
+});
