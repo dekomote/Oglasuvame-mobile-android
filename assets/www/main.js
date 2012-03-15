@@ -202,7 +202,8 @@ function fetchDetails(id){
 					$("#details-map").html("");
 				}				
 				$("#details .details-contact-mobile-phone a,#details .details-contact-home-phone a").button();
-				$.mobile.changePage('#details', {transition: 'none'});
+				$("#details").page();
+				$.mobile.changePage('#details', {transition: 'none',});
 				
 			}, 
 			dataType: "json",
