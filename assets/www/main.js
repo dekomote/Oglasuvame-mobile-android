@@ -46,7 +46,7 @@ function checkConnection() {
     if(networkState == Connection.NONE){
     	navigator.notification.confirm(
     	        'Апликацијата работи само со активна интернет конекција',  // message
-    	        device.exitApp,
+    	        navigator.app.exitApp,
     	        'Проблем',
     	        'Во ред'          // buttonLabels
     	    );
@@ -155,11 +155,11 @@ function fetchDetails(id){
 			cache: false,
 			async: false,
 			success: function(data,tm,jq){
-				$('#details h3.details-title').html(data.title);
-				$('#details .details-content').html(data.content);
-				$('#details .details-category').html(data.category.name);
-				$('#details .details-purpose').html(data.purpose.name);
-				$('#details .details-region').html(data.region.name);
+				$('#details .details-title').text(data.title);
+				$('#details .details-content').text(data.content);
+				$('#details .details-category').text(data.category.name);
+				$('#details .details-purpose').text(data.purpose.name);
+				$('#details .details-region').text(data.region.name);
 				if(data.price)
 					$('#details .details-price').html("Цена: "+data.price+" "+data.currency);
 				else
@@ -167,16 +167,14 @@ function fetchDetails(id){
 				$('#details .details-contact-name').html(data.contact_person_name);
 				
 				if(data.home_phone)
-					$('#details .details-contact-home-phone').html('<a data-role="button" data-theme="a" data-icon="gear" href="tel:'+data.home_phone+'">'+data.home_phone+'</a>');
+					$('#details .details-contact-home-phone').html('<a data-icon="gear" href="tel:'+data.home_phone+'">'+data.home_phone+'</a>');
 				else
 					$('#details .details-contact-home-phone').html("");
 				
 				if(data.mobile_phone)
-					$('#details .details-contact-mobile-phone').html('<a data-role="button" data-theme="a" data-icon="gear" href="tel:'+data.mobile_phone+'">'+data.mobile_phone+'</a>');
+					$('#details .details-contact-mobile-phone').html('<a data-icon="gear" href="tel:'+data.mobile_phone+'">'+data.mobile_phone+'</a>');
 				else
 					$('#details .details-contact-mobile-phone').html("");
-				
-				$('#details a[data-role=button]').button();
 				
 				if(data.location_lon){
 					$("#details-map").css("width","100%");
@@ -202,8 +200,10 @@ function fetchDetails(id){
 					$("#details-map").css("width","100%");
 					$("#details-map").css("height","0em");
 					$("#details-map").html("");
-				}
+				}				
+				$("#details .details-contact-mobile-phone a,#details .details-contact-home-phone a").button();
 				$.mobile.changePage('#details', {transition: 'none'});
+				
 			}, 
 			dataType: "json",
 			error: function(jqm, text){
@@ -213,6 +213,7 @@ function fetchDetails(id){
 }
 
 $("#classifieds").live('pageinit', function(e){
+	
 	loadClassifieds();
 	
 	$("#filter-button").tap(function(e){
@@ -241,12 +242,12 @@ $("#classifieds").live('pageinit', function(e){
 		loadClassifieds(function(){$.mobile.silentScroll(t)});
 	});
 	
-	$("#close-app").live("tap", function(e){
+	$("#close-app").tap(function(e){
 		navigator.notification.confirm(
     	        'Излези од апликацијата',
     	        function(button){
     	        	if(button==1)
-    	        		device.exitApp();
+    	        		navigator.app.exitApp();
     	        },
     	        'Излез',
     	        'Да,Не'

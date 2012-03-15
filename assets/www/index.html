@@ -19,7 +19,7 @@
     	<div data-role="page" id="classifieds">
         	<div data-role="header" data-position="fixed" data-theme="a">        		
         		<a href="#filter" data-icon="search" data-transition="none">Барај</a>
-        		<a id="close-app" href="#close" data-icon="delete" data-transition="none" data-iconpos="right">Затвори</a>
+        		<a id="close-app" href="#" data-icon="delete" data-transition="none" data-iconpos="right">Затвори</a>
 	            <h3>
 	                Огласи
 	            </h3>
@@ -71,14 +71,14 @@
         </div>
         
         <div data-role="page" id="details">
-        	<div data-role="header" data-theme="a" data-position="fixed">
+        	<div data-role="header" data-theme="a">
         		<a href="#classifieds" data-icon="back" data-transition="none" data-iconpos="left">Огласи</a>
 	            <h3>
 	                Детали
 	            </h3>
 	        </div>
-            <div data-role="content">
-            	<h3 class="details-title"></h3>
+            <div data-role="content" data-theme="a">
+            	<p class="details-title" style="font-weight:bold"></p>
             	<p class="details-content"></p>
             	<p>
             		<b class="details-purpose"></b><br/>
@@ -86,10 +86,10 @@
             		<b class="details-region"></b><br/>
             		<b class="details-price"></b><br/><br/>
             		<b class="details-contact-name"></b>
-            		<b class="details-contact-home-phone"></b>
-            		<b class="details-contact-mobile-phone"></b><br/>
             	</p>
-            	<div id="details-map" style="width:100%;height:10em;"></div>
+            	<div class="details-contact-home-phone"></div>
+            	<div class="details-contact-mobile-phone"></div>
+            	<div id="details-map" style="width:100%;height:10em;clear:both;overflow:hidden;"></div>
             </div>
         </div>
         
