@@ -203,7 +203,7 @@ function fetchDetails(id){
 				}				
 				$("#details .details-contact-mobile-phone a,#details .details-contact-home-phone a").button();
 				$("#details").page();
-				$.mobile.changePage('#details', {transition: 'none',});
+				$.mobile.changePage('#details', {transition: 'none'});
 				
 			}, 
 			dataType: "json",
