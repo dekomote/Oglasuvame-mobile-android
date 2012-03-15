@@ -15,9 +15,20 @@ function onDeviceReady(){
 
     $.mobile.allowCrossDomainPages = true;
     $.support.cors = true;
-    $.mobile.defaultPageTransition = 'none';
-    $.ajaxSetup({timeout: 10000, async: false, cache:false});
+    $.mobile.defaultPageTransition = 'none';    
 	checkConnection();
+	
+	$.ajaxSetup({
+		timeout: 10000,
+		async: false,
+		cache:false,
+		beforeSend: function(){
+			$('body').addClass('ui-loading');
+		},
+		complete: function(){
+			$('body').removeClass('ui-loading');
+		}
+	});
 }
 
 function checkConnection() {
@@ -35,7 +46,7 @@ function checkConnection() {
     if(networkState == Connection.NONE){
     	navigator.notification.confirm(
     	        'Апликацијата работи само со активна интернет конекција',  // message
-    	        navigator.app.exitApp,
+    	        device.exitApp,
     	        'Проблем',
     	        'Во ред'          // buttonLabels
     	    );
@@ -70,8 +81,7 @@ function loadCategories(){
 	}
 }
 
-function loadClassifieds(callback){
-	$.mobile.showPageLoadingMsg();
+function loadClassifieds(callback){	
 	$.ajax({
 		async: false,
 		timeout: 5000,
@@ -118,14 +128,13 @@ function loadClassifieds(callback){
 				else
 					alert('Нема следни огласи.');							
 			}
-		    $.mobile.hidePageLoadingMsg();
+		    
 			if(callback){
 				callback();
 			}
 		}, 
 		
 		error: function(jqXHR, textStatus){
-			$.mobile.hidePageLoadingMsg();			
 			alert('Проблем со конекција. Пробајте повторно.');				
 		}
 	});
@@ -146,7 +155,7 @@ function fetchDetails(id){
 			cache: false,
 			async: false,
 			success: function(data,tm,jq){
-				$('#details h3').html(data.title);
+				$('#details h3.details-title').html(data.title);
 				$('#details .details-content').html(data.content);
 				$('#details .details-category').html(data.category.name);
 				$('#details .details-purpose').html(data.purpose.name);
@@ -158,14 +167,16 @@ function fetchDetails(id){
 				$('#details .details-contact-name').html(data.contact_person_name);
 				
 				if(data.home_phone)
-					$('#details .details-contact-home-phone').html('<a href="tel:'+data.home_phone+'">'+data.home_phone+'</a>');
+					$('#details .details-contact-home-phone').html('<a data-role="button" data-theme="a" data-icon="gear" href="tel:'+data.home_phone+'">'+data.home_phone+'</a>');
 				else
 					$('#details .details-contact-home-phone').html("");
 				
 				if(data.mobile_phone)
-					$('#details .details-contact-mobile-phone').html('<a href="tel:'+data.mobile_phone+'">'+data.mobile_phone+'</a>');
+					$('#details .details-contact-mobile-phone').html('<a data-role="button" data-theme="a" data-icon="gear" href="tel:'+data.mobile_phone+'">'+data.mobile_phone+'</a>');
 				else
 					$('#details .details-contact-mobile-phone').html("");
+				
+				$('#details a[data-role=button]').button();
 				
 				if(data.location_lon){
 					$("#details-map").css("width","100%");
@@ -192,7 +203,7 @@ function fetchDetails(id){
 					$("#details-map").css("height","0em");
 					$("#details-map").html("");
 				}
-				$.mobile.changePage('#details', {transition: 'none', role: 'dialog'});
+				$.mobile.changePage('#details', {transition: 'none'});
 			}, 
 			dataType: "json",
 			error: function(jqm, text){
@@ -214,6 +225,16 @@ $("#classifieds").live('pageinit', function(e){
 		loadClassifieds(function(){$.mobile.changePage("#classifieds");});
 	});
 	
+	$("#filter-all-button").tap(function(e){
+		e.preventDefault();
+		OglSettings.search_query = "";
+		OglSettings.purpose = "";
+		OglSettings.chosen_category = "";
+		OglSettings.chosen_region = "";
+		OglSettings.current_page = 0;
+		loadClassifieds(function(){$.mobile.changePage("#classifieds");});
+	});
+	
 	$("#more-btn").live("tap", function(e){
 		e.preventDefault();
 		var t = $(this).offset().top;
@@ -225,7 +246,7 @@ $("#classifieds").live('pageinit', function(e){
     	        'Излези од апликацијата',
     	        function(button){
     	        	if(button==1)
-    	        		navigator.app.exitApp();
+    	        		device.exitApp();
     	        },
     	        'Излез',
     	        'Да,Не'
